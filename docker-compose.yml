@@ -1,0 +1,52 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: autorecon-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_secret_123
+      MYSQL_DATABASE: settlement_reconciliation
+      MYSQL_USER: recon_user
+      MYSQL_PASSWORD: recon_secret_123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "recon_user", "-precon_secret_123"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: autorecon-backend
+    restart: always
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: recon_user
+      MYSQL_PASSWORD: recon_secret_123
+      MYSQL_DATABASE: settlement_reconciliation
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: autorecon-frontend
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
